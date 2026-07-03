@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom overrides for "Aurora Intelligence" theme mapped to existing color classes */
+  --color-slate-950: #050B14; /* Deep Background */
+  --color-slate-900: #101722; /* Surface */
+  --color-slate-850: #131d2b; /* Subtle inner border/lines */
+  --color-slate-800: #172436; /* Normal borders */
+  --color-slate-700: #20334d; /* Hover border */
+  --color-slate-600: #2c4466;
+  --color-slate-500: #4a678f;
+  --color-slate-400: #94A3B8; /* Secondary text */
+  --color-slate-300: #cbd5e1;
+  --color-slate-200: #e2e8f0;
+  --color-slate-100: #f1f5f9;
+  --color-slate-50:  #f8fafc;
+
+  /* Primary Accent: #1DE9B6 (Aurora Mint/Teal) */
+  --color-sky-50: #e0fbf6;
+  --color-sky-100: #b3f7ea;
+  --color-sky-200: #80f2db;
+  --color-sky-300: #4dedcc;
+  --color-sky-400: #1DE9B6;
+  --color-sky-500: #00C2A8; /* Secondary Accent */
+  --color-sky-600: #00a18b;
+  --color-sky-700: #00806e;
+  --color-sky-800: #006053;
+  --color-sky-900: #004037;
+  --color-sky-950: #050b14;
+
+  /* Secondary Accent: #00C2A8 (Deep Emerald) */
+  --color-indigo-50: #e0fbf6;
+  --color-indigo-100: #b3f7ea;
+  --color-indigo-200: #80f2db;
+  --color-indigo-300: #4dedcc;
+  --color-indigo-400: #1DE9B6;
+  --color-indigo-500: #00C2A8;
+  --color-indigo-600: #00a18b;
+  --color-indigo-700: #00806e;
+  --color-indigo-800: #006053;
+  --color-indigo-900: #004037;
+  --color-indigo-950: #101722;
+
+  /* Blue also mapped to Aurora theme */
+  --color-blue-50: #e0fbf6;
+  --color-blue-100: #b3f7ea;
+  --color-blue-200: #80f2db;
+  --color-blue-300: #4dedcc;
+  --color-blue-400: #1DE9B6;
+  --color-blue-500: #00C2A8;
+  --color-blue-600: #00a18b;
+  --color-blue-950: #050b14;
+
+  /* Purple mapped to Highlight Glow: #7CFFCB */
+  --color-purple-50: #f0fff9;
+  --color-purple-100: #d6ffef;
+  --color-purple-200: #adffdc;
+  --color-purple-300: #7CFFCB;
+  --color-purple-400: #7CFFCB;
+  --color-purple-500: #1DE9B6;
+  --color-purple-600: #00C2A8;
+
+  /* Specific custom keys if needed */
+  --color-aurora-primary: #1DE9B6;
+  --color-aurora-secondary: #00C2A8;
+  --color-aurora-highlight: #7CFFCB;
+  --color-aurora-warning: #F4B942;
+  --color-aurora-critical: #FF5D73;
+}
+
+/* Custom scrollbars for a clean tech dashboard feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(5, 11, 20, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(29, 233, 182, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(29, 233, 182, 0.3);
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: #050B14;
+}
+
+body {
+  color: #F8FAFC;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}

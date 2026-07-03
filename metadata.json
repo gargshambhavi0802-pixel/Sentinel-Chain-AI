@@ -1,0 +1,8 @@
+{
+  "name": "SentinelChain AI",
+  "description": "Premium enterprise AI-powered supply chain intelligence platform for global disruption monitoring, impact prediction, and automated mitigation planning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
