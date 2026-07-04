@@ -1,20 +1,50 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+
+# 🛡️ Sentinel-Chain-AI
+
+An AI-powered security intelligence platform that analyzes applications, detects vulnerabilities, and provides actionable insights through an interactive dashboard.
+
+### 🌐 Live Demo
+https://sentinel-chain-dqou32y80-siddhigrg1201-2508s-projects.vercel.app
+
 </div>
 
-# Run and deploy your AI Studio app
+---
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/4c07df94-b262-4fed-998a-f56fe8cce3d3
+- 🔍 AI-powered security analysis
+- 📊 Interactive dashboard
+- 📈 Real-time insights
+- 📱 Responsive design
+- ⚡ Fast and modern UI
 
-## Run Locally
+## Tech Stack
 
-**Prerequisites:**  Node.js
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Gemini API
 
+## Installation
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm install
+```
+
+Create a `.env.local` file:
+
+```env
+GEMINI_API_KEY=your_api_key
+```
+
+Run locally:
+
+```bash
+npm run dev
+```
+
+## Live Demo
+
+https://sentinel-chain-dqou32y80-siddhigrg1201-2508s-projects.vercel.app
