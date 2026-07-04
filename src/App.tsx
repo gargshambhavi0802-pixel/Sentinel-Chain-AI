@@ -76,17 +76,9 @@ const mapCognitoRoleToIam = (cognitoRole: string): IAMRole => {
 
 export default function App() {
   // Amazon Cognito user session (persisted via localStorage)
-  const [cognitoUser, setCognitoUser] = useState<CognitoUser | null>(() => {
-    return authService.getCurrentUser();
-  });
-
-  const [activeRole, setActiveRole] = useState<IAMRole>(() => {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-      return mapCognitoRoleToIam(currentUser.role);
-    }
-    return IAM_ROLES[0]; // Default: Solutions Architect
-  });
+  const [cognitoUser, setCognitoUser] = useState<CognitoUser | null>(null);
+const [loadingAuth, setLoadingAuth] = useState(true);
+const [activeRole, setActiveRole] = useState<IAMRole>(IAM_ROLES[0]);
 
   const [showAuth, setShowAuth] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
@@ -118,6 +110,16 @@ export default function App() {
   }, []);
 
   // Ensure scroll position is reset to the top whenever active section changes
+  useEffect(() => {
+  authService.getCurrentUser().then((user) => {
+    if (user) {
+      setCognitoUser(user);
+      setActiveRole(mapCognitoRoleToIam(user.role));
+    }
+
+    setLoadingAuth(false);
+  });
+}, []);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeSection]);
@@ -179,7 +181,7 @@ export default function App() {
   };
 
   const handleLoginSuccess = (user: CognitoUser) => {
-    localStorage.setItem("sentinel_cognito_session", JSON.stringify(user));
+
     setCognitoUser(user);
     setActiveRole(mapCognitoRoleToIam(user.role));
     window.location.hash = "dashboard";
@@ -192,6 +194,9 @@ export default function App() {
   };
 
   // Protected Routes Check: Require authenticated Cognito User pool session
+  if (loadingAuth) {
+  return null;
+}
   if (!cognitoUser) {
     return (
       <div className="relative min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden antialiased flex items-center justify-center">

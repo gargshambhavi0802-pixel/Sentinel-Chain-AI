@@ -1,65 +1,119 @@
+import {
+  signIn as amplifySignIn,
+  signUp as amplifySignUp,
+  confirmSignUp as amplifyConfirmSignUp,
+  signOut as amplifySignOut,
+  getCurrentUser as amplifyGetCurrentUser,
+  fetchUserAttributes,
+  resetPassword as amplifyResetPassword,
+  confirmResetPassword as amplifyConfirmResetPassword,
+} from "aws-amplify/auth";
 import { CognitoUser, CognitoRole } from "../components/CognitoAuthPage";
 
-// Local storage keys for state persistence
-const SESSION_KEY = "sentinel_cognito_session";
-const REGISTERED_USERS_KEY = "sentinel_registered_users";
+// ---------------------------------------------------------------------------
+// Local storage keys (used only to persist the extra profile fields that
+// Cognito itself does not store: name / company / role)
+// ---------------------------------------------------------------------------
+const PROFILE_KEY_PREFIX = "sentinel_profile_";
+const PENDING_SIGNUP_EMAIL_KEY = "sentinel_pending_signup_email";
 
+interface LocalProfile {
+  name: string;
+  company: string;
+  role: CognitoRole;
+}
+
+const profileKey = (email: string): string =>
+  `${PROFILE_KEY_PREFIX}${email.toLowerCase()}`;
+
+const saveProfile = (email: string, profile: LocalProfile): void => {
+  localStorage.setItem(profileKey(email), JSON.stringify(profile));
+};
+
+const loadProfile = (email: string): LocalProfile | null => {
+  const raw = localStorage.getItem(profileKey(email));
+  return raw ? (JSON.parse(raw) as LocalProfile) : null;
+};
+
+// ---------------------------------------------------------------------------
+// Error helper - converts Cognito/Amplify errors into readable JS Errors
+// ---------------------------------------------------------------------------
+const toReadableError = (err: unknown): Error => {
+  if (err instanceof Error) {
+    return new Error(err.message);
+  }
+  return new Error("An unknown authentication error occurred.");
+};
+
+// ---------------------------------------------------------------------------
+// authService
+// ---------------------------------------------------------------------------
 export const authService = {
   /**
-   * Retrieves the currently authenticated user session if it exists.
+   * Retrieves the currently authenticated user session if it exists,
+   * merging the real Cognito session with the locally stored profile
+   * (name / company / role).
    */
-  getCurrentUser: (): CognitoUser | null => {
-    const saved = localStorage.getItem(SESSION_KEY);
-    return saved ? JSON.parse(saved) : null;
+  getCurrentUser: async (): Promise<CognitoUser | null> => {
+    try {
+      await amplifyGetCurrentUser();
+      const attributes = await fetchUserAttributes();
+      const email = attributes.email ?? "";
+
+      if (!email) {
+        return null;
+      }
+
+      const profile = loadProfile(email);
+
+      const user: CognitoUser = {
+        name: profile?.name ?? email,
+        email,
+        company: profile?.company ?? "",
+        role: (profile?.role ?? "") as CognitoRole,
+      };
+
+      return user;
+    } catch {
+      return null;
+    }
   },
 
   /**
-   * Performs sign-in handshake. Simulates Cognito STS auth delay, validating credentials against
-   * the persistent user directory or default fallback credentials.
+   * Performs sign-in against the real AWS Cognito User Pool and returns
+   * a merged CognitoUser object (Cognito identity + locally stored profile).
    */
   signIn: async (email: string, password: string): Promise<CognitoUser> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Fallback default high-quality enterprise user
-        if (email.toLowerCase() === "sarah.jenkins@sentinelchain.ai" && password === "SecurePass123!") {
-          const defaultUser: CognitoUser = {
-            name: "Sarah Jenkins",
-            email: "sarah.jenkins@sentinelchain.ai",
-            company: "Sentinel Logistics Corp",
-            role: "Supply Chain Manager"
-          };
-          localStorage.setItem(SESSION_KEY, JSON.stringify(defaultUser));
-          resolve(defaultUser);
-          return;
-        }
+    try {
+      const result = await amplifySignIn({ username: email, password });
 
-        // Check locally registered mock Cognito accounts
-        const storedUsersRaw = localStorage.getItem(REGISTERED_USERS_KEY);
-        const registeredUsers = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
-        const matchedUser = registeredUsers.find(
-          (u: any) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+      if (result.nextStep.signInStep !== "DONE") {
+        throw new Error(
+          `Authentication requires additional step: ${result.nextStep.signInStep}`
         );
+      }
 
-        if (matchedUser) {
-          const userSession: CognitoUser = {
-            name: matchedUser.name,
-            email: matchedUser.email,
-            company: matchedUser.company,
-            role: matchedUser.role
-          };
-          localStorage.setItem(SESSION_KEY, JSON.stringify(userSession));
-          resolve(userSession);
-        } else {
-          const error = new Error("UserNotFoundException: Incorrect email or password entered.");
-          error.name = "UserNotFoundException";
-          reject(error);
-        }
-      }, 1000);
-    });
+      const attributes = await fetchUserAttributes();
+      const resolvedEmail = attributes.email ?? email;
+      const profile = loadProfile(resolvedEmail);
+
+      const user: CognitoUser = {
+        name: profile?.name ?? resolvedEmail,
+        email: resolvedEmail,
+        company: profile?.company ?? "",
+        role: (profile?.role ?? "") as CognitoRole,
+      };
+
+      return user;
+    } catch (err) {
+      throw toReadableError(err);
+    }
   },
 
   /**
-   * Registers a new user within the Cognito User Pool simulation directory.
+   * Registers a new user in the real Cognito User Pool using email/password.
+   * name / company / role are persisted locally since Cognito custom
+   * attributes are intentionally not used.
    */
   signUp: async (
     name: string,
@@ -68,96 +122,91 @@ export const authService = {
     role: CognitoRole,
     password: string
   ): Promise<{ email: string; requiresVerification: boolean }> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Save user details temporarily for the verification stage
-        const tempRegUser = { name, company, email, role, password };
-        localStorage.setItem("sentinel_temp_reg_user", JSON.stringify(tempRegUser));
-        resolve({ email, requiresVerification: true });
-      }, 1000);
-    });
+    try {
+      const result = await amplifySignUp({
+        username: email,
+        password,
+        options: {
+          userAttributes: {
+            email,
+          },
+        },
+      });
+
+      saveProfile(email, { name, company, role });
+      localStorage.setItem(PENDING_SIGNUP_EMAIL_KEY, email);
+
+      const requiresVerification = !result.isSignUpComplete;
+
+      return { email, requiresVerification };
+    } catch (err) {
+      throw toReadableError(err);
+    }
   },
 
   /**
-   * Verifies registration with a 6-digit confirmation code.
+   * Confirms registration with a 6-digit confirmation code, against the
+   * email that was most recently registered via signUp().
    */
   confirmSignUp: async (code: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (code.length !== 6) {
-          reject(new Error("InvalidParameterException: Verification code must be exactly 6 characters."));
-          return;
-        }
+    try {
+      const email = localStorage.getItem(PENDING_SIGNUP_EMAIL_KEY);
 
-        const tempRegUserRaw = localStorage.getItem("sentinel_temp_reg_user");
-        if (tempRegUserRaw) {
-          const tempUser = JSON.parse(tempRegUserRaw);
-          
-          // Save verified user to registered users persistent directory
-          const storedUsersRaw = localStorage.getItem(REGISTERED_USERS_KEY);
-          const registeredUsers = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
-          registeredUsers.push(tempUser);
-          localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registeredUsers));
-          
-          localStorage.removeItem("sentinel_temp_reg_user");
-          resolve();
-        } else {
-          reject(new Error("ExpiredCodeException: Registration session has expired. Please sign up again."));
-        }
-      }, 1000);
-    });
+      if (!email) {
+        throw new Error(
+          "ExpiredCodeException: Registration session has expired. Please sign up again."
+        );
+      }
+
+      await amplifyConfirmSignUp({
+        username: email,
+        confirmationCode: code,
+      });
+
+      localStorage.removeItem(PENDING_SIGNUP_EMAIL_KEY);
+    } catch (err) {
+      throw toReadableError(err);
+    }
   },
 
   /**
-   * Requests a password reset for a registered user.
+   * Requests a password reset for a registered Cognito user.
    */
   forgotPassword: async (email: string): Promise<void> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve();
-      }, 1000);
-    });
+    try {
+      await amplifyResetPassword({ username: email });
+    } catch (err) {
+      throw toReadableError(err);
+    }
   },
 
   /**
-   * Confirms password reset with security code and creates the new password.
+   * Confirms password reset with a security code and sets the new password.
    */
-  confirmForgotPassword: async (email: string, code: string, newPassword: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (code.length !== 6) {
-          reject(new Error("InvalidParameterException: Code must be exactly 6 digits."));
-          return;
-        }
-
-        if (email.toLowerCase() === "sarah.jenkins@sentinelchain.ai") {
-          resolve();
-          return;
-        }
-
-        const storedUsersRaw = localStorage.getItem(REGISTERED_USERS_KEY);
-        const registeredUsers = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
-        const userIndex = registeredUsers.findIndex((u: any) => u.email.toLowerCase() === email.toLowerCase());
-
-        if (userIndex !== -1) {
-          registeredUsers[userIndex].password = newPassword;
-          localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registeredUsers));
-          resolve();
-        } else {
-          // Simply succeed to simulate fluid Cognito behavior
-          resolve();
-        }
-      }, 1000);
-    });
+  confirmForgotPassword: async (
+    email: string,
+    code: string,
+    newPassword: string
+  ): Promise<void> => {
+    try {
+      await amplifyConfirmResetPassword({
+        username: email,
+        confirmationCode: code,
+        newPassword,
+      });
+    } catch (err) {
+      throw toReadableError(err);
+    }
   },
 
   /**
-   * Clears Cognito session cookie / storage item.
+   * Signs the current user out of the Cognito session.
    */
   signOut: async (): Promise<void> => {
-    return new Promise((resolve) => {
-      localStorage.removeItem(SESSION_KEY);
-      resolve();
-    });
-  }
+    try {
+      await amplifySignOut();
+    } catch (err) {
+      throw toReadableError(err);
+    }
+  },
 };
