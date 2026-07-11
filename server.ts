@@ -1,7 +1,10 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
-import { GoogleGenAI, Type } from "@google/genai";
+import {
+  BedrockRuntimeClient,
+  ConverseCommand,
+} from "@aws-sdk/client-bedrock-runtime";
 import { createServer as createViteServer } from "vite";
 
 // Load environment variables
@@ -12,27 +15,16 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Initialize Gemini SDK with telemetry header
-const apiKey = process.env.GEMINI_API_KEY;
-let ai: GoogleGenAI | null = null;
+// Initialize Amazon Bedrock Runtime client
+const bedrock = new BedrockRuntimeClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
 
-if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
-  try {
-    ai = new GoogleGenAI({
-      apiKey: apiKey,
-      httpOptions: {
-        headers: {
-          "User-Agent": "aistudio-build",
-        },
-      },
-    });
-    console.log("SentinelChain AI: Gemini SDK initialized successfully.");
-  } catch (error) {
-    console.error("SentinelChain AI: Error initializing Gemini SDK:", error);
-  }
-} else {
-  console.log("SentinelChain AI: Operating in Offline Intel Mode (Graceful Mock). Configure GEMINI_API_KEY to enable live Bedrock reasoning.");
-}
+console.log("SentinelChain AI: Amazon Bedrock Runtime initialized.");
 
 // 1. API: Analyze Disruption
 app.post("/api/analyze-disruption", async (req, res) => {
@@ -42,75 +34,77 @@ app.post("/api/analyze-disruption", async (req, res) => {
   }
 
   // If live AI is available, use it!
-  if (ai) {
+  if (process.env.BEDROCK_MODEL_ID) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: `Analyze the following supply chain or logistics disruption report:
+      const systemInstruction = `You are SentinelChain AI, an elite enterprise supply chain intelligence engine integrated with AWS Bedrock. You analyze raw news, port, weather, and supplier alerts, calculating risk propagation across global networks. Return output strictly matching the requested JSON schema. Do not include markdown formatting or wrappers outside of raw JSON.
+
+The JSON object you return must strictly match this shape:
+{
+  "headline": string, // A crisp 5-8 word headline summarizing the threat
+  "category": string, // Must be one of: 'News', 'Weather', 'Port', 'Supplier'
+  "severity": string, // Must be one of: 'Critical', 'High', 'Medium', 'Low'
+  "probability": integer, // Probability of direct impact in percentage (e.g. 85)
+  "affectedNodes": string[], // Array of specific ports, routes, canals, or supplier regions affected
+  "impactInventory": integer, // Estimated percentage of inventory drawdown, as a negative integer (e.g. -35)
+  "impactDeliveries": string, // Description of expected delivery delays, lead-times, or rerouting overheads
+  "impactCost": integer, // Estimated percentage of logistics cost surge, as a positive integer (e.g. +22)
+  "reasoning": string[], // 3 structured steps of analytical reasoning tracing the cascade of the disruption
+  "recommendations": [ // At least 2 highly specific mitigation playbooks
+    {
+      "title": string, // Name of the mitigation tactic (e.g. 'Air-freight high priority microchips')
+      "reduction": integer, // Risk reduction percentage (e.g. 45)
+      "cost": string, // Cost estimation label (e.g. '$$$ High' or '$$ Medium' or '$ Low')
+      "description": string // Detailed description of how to execute this playbook
+    }
+  ]
+}
+
+Respond with ONLY the raw JSON object. Do not include any preamble, explanation, or markdown code fences.`;
+
+      const userPrompt = `Analyze the following supply chain or logistics disruption report:
 "${text}"
 
-Provide a highly realistic, precise, and structural impact assessment.`,
-        config: {
-          systemInstruction: "You are SentinelChain AI, an elite enterprise supply chain intelligence engine integrated with AWS Bedrock. You analyze raw news, port, weather, and supplier alerts, calculating risk propagation across global networks. Return output strictly matching the requested JSON schema. Do not include markdown formatting or wrappers outside of raw JSON.",
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              headline: { type: Type.STRING, description: "A crisp 5-8 word headline summarizing the threat" },
-              category: { type: Type.STRING, description: "Must be one of: 'News', 'Weather', 'Port', 'Supplier'" },
-              severity: { type: Type.STRING, description: "Must be one of: 'Critical', 'High', 'Medium', 'Low'" },
-              probability: { type: Type.INTEGER, description: "Probability of direct impact in percentage (e.g. 85)" },
-              affectedNodes: { 
-                type: Type.ARRAY, 
-                items: { type: Type.STRING },
-                description: "Array of specific ports, routes, canals, or supplier regions affected" 
-              },
-              impactInventory: { type: Type.INTEGER, description: "Estimated percentage of inventory drawdown, as a negative integer (e.g. -35)" },
-              impactDeliveries: { type: Type.STRING, description: "Description of expected delivery delays, lead-times, or rerouting overheads" },
-              impactCost: { type: Type.INTEGER, description: "Estimated percentage of logistics cost surge, as a positive integer (e.g. +22)" },
-              reasoning: { 
-                type: Type.ARRAY, 
-                items: { type: Type.STRING },
-                description: "3 structured steps of analytical reasoning tracing the cascade of the disruption" 
-              },
-              recommendations: {
-                type: Type.ARRAY,
-                description: "At least 2 highly specific mitigation playbooks",
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    title: { type: Type.STRING, description: "Name of the mitigation tactic (e.g. 'Air-freight high priority microchips')" },
-                    reduction: { type: Type.INTEGER, description: "Risk reduction percentage (e.g. 45)" },
-                    cost: { type: Type.STRING, description: "Cost estimation label (e.g. '$$$ High' or '$$ Medium' or '$ Low')" },
-                    description: { type: Type.STRING, description: "Detailed description of how to execute this playbook" }
-                  },
-                  required: ["title", "reduction", "cost", "description"]
-                }
-              }
-            },
-            required: [
-              "headline",
-              "category",
-              "severity",
-              "probability",
-              "affectedNodes",
-              "impactInventory",
-              "impactDeliveries",
-              "impactCost",
-              "reasoning",
-              "recommendations"
-            ]
-          }
-        }
+Provide a highly realistic, precise, and structural impact assessment.`;
+
+      const command = new ConverseCommand({
+        modelId: process.env.BEDROCK_MODEL_ID,
+        system: [{ text: systemInstruction }],
+        messages: [
+          {
+            role: "user",
+            content: [{ text: userPrompt }],
+          },
+        ],
+        inferenceConfig: {
+          maxTokens: 2048,
+          temperature: 0.3,
+        },
       });
 
-      const responseText = response.text || "{}";
+      const response = await bedrock.send(command);
+      const contentBlocks = response.output?.message?.content || [];
+      const responseText = contentBlocks
+        .map((block) => ("text" in block ? block.text : ""))
+        .join("");
       const cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
-      const parsedData = JSON.parse(cleanJson);
+      let parsedData: Record<string, any>;
+
+      try {
+        parsedData = JSON.parse(cleanJson);
+      } catch (err) {
+        throw new Error("Amazon Bedrock did not return valid JSON.");
+      }
+
       return res.json(parsedData);
     } catch (apiError: any) {
-      console.error("SentinelChain AI: Gemini API Error, falling back to simulated intelligence:", apiError);
-      // Fallback is handled below
+      console.log("========== BEDROCK ERROR ==========");
+      console.log(apiError);
+      console.log(apiError.name);
+      console.log(apiError.message);
+      console.log(apiError.$metadata);
+      console.log(apiError.Code);
+      console.log(apiError.stack);
+      console.log("==================================");
     }
   }
 
@@ -277,7 +271,7 @@ app.get("/api/performance-metrics", (req, res) => {
   // Generate slightly dynamic but realistic telemetry metrics for AWS CloudRun deployment
   const memoryUsed = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
   const memoryTotal = Math.round(process.memoryUsage().heapTotal / 1024 / 1024);
-  
+
   res.json({
     status: "HEALTHY",
     uptimeSeconds: Math.round(process.uptime()),
@@ -299,7 +293,7 @@ app.post("/api/notify-sns", (req, res) => {
   }
 
   console.log(`[Amazon SNS Dispatch] Channel: ${channel.toUpperCase()} | Severity: ${severity || "INFO"} | Msg: "${message}"`);
-  
+
   res.json({
     success: true,
     messageId: `sns-msg-${Math.floor(Math.random() * 9000000) + 1000000}`,
@@ -319,7 +313,7 @@ if (process.env.NODE_ENV !== "production") {
     appType: "spa",
   }).then((vite) => {
     app.use(vite.middlewares);
-    
+
     app.use("*", (req, res, next) => {
       // In dev mode, fall back to vite static handling
       next();

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { 
-  BrainCircuit, Cpu, Code, AlignLeft, RefreshCw, 
+import {
+  BrainCircuit, Cpu, Code, AlignLeft, RefreshCw,
   Terminal, ShieldCheck, HelpCircle, CheckCircle,
   Hash, Info, FileCode, CheckSquare
 } from "lucide-react";
@@ -13,6 +13,10 @@ interface AiReasoningProps {
 }
 
 export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoningProps) {
+  console.log("========== AI REASONING ==========");
+  console.log(activeDisruption);
+  console.log("=================================");
+
   const [activeStep, setActiveStep] = useState(1);
   const [selectedTokenIdx, setSelectedTokenIdx] = useState<number | null>(null);
   const [hoveredEntity, setHoveredEntity] = useState<string | null>(null);
@@ -41,7 +45,7 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
     recommendations: []
   };
 
-  const rawParagraph = `ALERT: Critical obstruction reported along the Suez Canal Corridor. Containership vessel grounded sideways, blocking shipping lanes in both directions. Directly affects Rotterdam Entry Port schedules. Risk projection calculates a 95% probability of cascade. Estimated delay: 10-14 days.`;
+  const rawParagraph = displayDisruption.promptText || `ALERT: Critical obstruction reported along the Suez Canal Corridor. Containership vessel grounded sideways, blocking shipping lanes in both directions. Directly affects Rotterdam Entry Port schedules. Risk projection calculates a 95% probability of cascade. Estimated delay: 10-14 days.`;
 
   // Pre-split tokens
   const tokens = rawParagraph.split(" ").map((word, i) => {
@@ -52,8 +56,8 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
       "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
       "bg-amber-500/10 text-amber-400 border-amber-500/20"
     ];
-    return { 
-      word: word.replace(/[.,:;]/g, ""), 
+    return {
+      word: word.replace(/[.,:;]/g, ""),
       style: colors[i % colors.length],
       embeddingIndex: Math.floor(10000 + (i * 493.52)),
       weight: parseFloat((0.45 + (Math.sin(i) * 0.35)).toFixed(3))
@@ -77,14 +81,14 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
 
         {/* Outer UI Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          
+
           {/* Left Panel: Stages Selector (4 Cols) */}
           <div className="lg:col-span-4 flex flex-col justify-between space-y-4">
             <div className="space-y-3 text-left">
               <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">
                 Select Processing Stage
               </span>
-              
+
               <div className="space-y-2">
                 {stepsInfo.map((st) => {
                   const Icon = st.icon;
@@ -97,17 +101,15 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
                         setSelectedTokenIdx(null);
                         setHoveredEntity(null);
                       }}
-                      className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-start space-x-3.5 cursor-pointer ${
-                        isActive
+                      className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-start space-x-3.5 cursor-pointer ${isActive
                           ? "bg-slate-950 border-sky-500/60 shadow-lg shadow-sky-950/10"
                           : "bg-slate-900/30 border-slate-850 text-slate-400 hover:border-slate-800"
-                      }`}
+                        }`}
                     >
-                      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${
-                        isActive
+                      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${isActive
                           ? "bg-sky-500/10 border-sky-500 text-sky-400"
                           : "bg-slate-950 border-slate-850 text-slate-500"
-                      }`}>
+                        }`}>
                         <Icon className="w-4 h-4" />
                       </div>
                       <div>
@@ -128,7 +130,7 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
             <div className="bg-slate-900/40 border border-slate-850 rounded-xl p-4 text-left font-mono text-[9px] text-slate-500 space-y-1.5">
               <div className="flex justify-between">
                 <span>MODEL KEY:</span>
-                <span className="text-sky-400 font-bold uppercase">gemini-2.5-pro</span>
+                <span className="text-sky-400 font-bold uppercase">amazon.nova-lite-v1:0</span>
               </div>
               <div className="flex justify-between">
                 <span>EMBEDDING DEPTH:</span>
@@ -159,7 +161,7 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
 
               {/* Step Output Box */}
               <div className="min-h-[260px] flex flex-col justify-center">
-                
+
                 {/* STEP 1: TOKENIZATION */}
                 {activeStep === 1 && (
                   <motion.div
@@ -178,14 +180,13 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
                         {tokens.map((tok, idx) => {
                           const isSelected = selectedTokenIdx === idx;
                           return (
-                            <span 
-                              key={idx} 
+                            <span
+                              key={idx}
                               onClick={() => setSelectedTokenIdx(idx)}
-                              className={`px-1.5 py-0.5 rounded border cursor-pointer transition-all ${
-                                isSelected 
-                                  ? "bg-sky-400 text-slate-950 border-sky-300 font-bold scale-105" 
+                              className={`px-1.5 py-0.5 rounded border cursor-pointer transition-all ${isSelected
+                                  ? "bg-sky-400 text-slate-950 border-sky-300 font-bold scale-105"
                                   : `${tok.style} hover:border-slate-500`
-                              }`}
+                                }`}
                             >
                               {tok.word}
                             </span>
@@ -237,37 +238,37 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
                     </div>
 
                     <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-850 text-xs leading-relaxed text-slate-300">
-                      ALERT: Critical obstruction reported along the{" "}
-                      <span 
+                      ALERT: A {displayDisruption.severity.toLowerCase()} threat event ({displayDisruption.category}) is active. Threat vectors affect node:{" "}
+                      <span
                         onMouseEnter={() => setHoveredEntity("location")}
                         onMouseLeave={() => setHoveredEntity(null)}
                         className="bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded font-mono font-semibold cursor-pointer transition-all inline-block"
                       >
-                        Suez Canal Corridor [Location]
+                        {displayDisruption.affectedNodes[0] || "Global Supply Route"} [Location]
                       </span>
-                      . Containership vessel grounded sideways, blocking shipping lanes in both directions. Directly affects{" "}
-                      <span 
+                      . Primary cargo transit is impacted at:{" "}
+                      <span
                         onMouseEnter={() => setHoveredEntity("hub")}
                         onMouseLeave={() => setHoveredEntity(null)}
                         className="bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-semibold cursor-pointer transition-all inline-block"
                       >
-                        Rotterdam Entry Port [Hub]
+                        {displayDisruption.affectedNodes[1] || displayDisruption.affectedNodes[0] || "Rotterdam Entry Port"} [Hub]
                       </span>{" "}
-                      schedules. Risk projection calculates a{" "}
-                      <span 
+                      schedules. Risk propagation calculations estimate a{" "}
+                      <span
                         onMouseEnter={() => setHoveredEntity("prob")}
                         onMouseLeave={() => setHoveredEntity(null)}
                         className="bg-purple-500/15 hover:bg-purple-500/25 text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono font-semibold cursor-pointer transition-all inline-block"
                       >
-                        95% [Probability]
+                        {displayDisruption.probability}% [Probability]
                       </span>{" "}
-                      probability of cascade. Estimated delay:{" "}
-                      <span 
+                      probability of total corridor cascade. Current lead-time projection:{" "}
+                      <span
                         onMouseEnter={() => setHoveredEntity("time")}
                         onMouseLeave={() => setHoveredEntity(null)}
                         className="bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-semibold cursor-pointer transition-all inline-block"
                       >
-                        10-14 days [Timeline]
+                        {displayDisruption.impactDeliveries.split(".")[0] || "10-14 days"} [Timeline]
                       </span>
                       .
                     </div>
@@ -301,7 +302,7 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
                     <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">
                       AI Cognitive Reasoning Trace
                     </span>
-                    
+
                     <div className="space-y-2 max-h-[190px] overflow-y-auto pr-1">
                       {displayDisruption.reasoning.map((step, idx) => (
                         <div
@@ -337,7 +338,7 @@ export default function AiReasoning({ activeDisruption, isAnalyzing }: AiReasoni
 
                     <div className="bg-slate-950 p-3 rounded-xl border border-slate-850 font-mono text-[10px] text-sky-400 overflow-x-auto max-h-[170px] overflow-y-auto leading-relaxed tab-size-2 max-w-full">
                       <pre>
-{`{
+                        {`{
   "headline": "${displayDisruption.headline}",
   "category": "${displayDisruption.category}",
   "severity": "${displayDisruption.severity}",

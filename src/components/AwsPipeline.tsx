@@ -129,7 +129,7 @@ export default function AwsPipeline({ currentStep }: AwsPipelineProps) {
       id: "bedrock",
       name: "4. Amazon Bedrock",
       icon: "🧠",
-      arn: "bedrock::model/gemini-2.5-pro",
+      arn: "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-lite-v1:0",
       desc: "Enterprise Generative AI layer. Formulates cascade risks, affected lanes, and coordinates playbooks.",
       details: "Leaverages temp = 0.15. Authenticated via secure IAM role policies.",
       metric: "1.2k tokens/s"

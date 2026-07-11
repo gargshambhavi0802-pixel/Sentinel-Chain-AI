@@ -19,20 +19,20 @@ import { LogOut, User } from "lucide-react";
 import { authService } from "./services/authService";
 
 // Import our rich Enterprise Pages & Dashboards
-import { 
-  DashboardOverview, 
-  LiveShipmentTracking, 
-  DelayedShipments, 
-  SupplierHealth, 
-  AlternativeSuppliers, 
-  RouteOptimization, 
-  InventorySuggestions, 
-  RiskTrends, 
-  Reports, 
-  VoiceAssistant, 
-  AiChat, 
-  Profile, 
-  CognitoLogin 
+import {
+  DashboardOverview,
+  LiveShipmentTracking,
+  DelayedShipments,
+  SupplierHealth,
+  AlternativeSuppliers,
+  RouteOptimization,
+  InventorySuggestions,
+  RiskTrends,
+  Reports,
+  VoiceAssistant,
+  AiChat,
+  Profile,
+  CognitoLogin
 } from "./components/EnterprisePages";
 
 const VALID_SECTIONS = [
@@ -77,14 +77,14 @@ const mapCognitoRoleToIam = (cognitoRole: string): IAMRole => {
 export default function App() {
   // Amazon Cognito user session (persisted via localStorage)
   const [cognitoUser, setCognitoUser] = useState<CognitoUser | null>(null);
-const [loadingAuth, setLoadingAuth] = useState(true);
-const [activeRole, setActiveRole] = useState<IAMRole>(IAM_ROLES[0]);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [activeRole, setActiveRole] = useState<IAMRole>(IAM_ROLES[0]);
 
   const [showAuth, setShowAuth] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
   const [activeDisruption, setActiveDisruption] = useState<Disruption | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
+
   // Progress states: idle -> ingest -> processing -> reasoning -> storage -> notification -> done
   const [pipelineStep, setPipelineStep] = useState<"idle" | "ingest" | "processing" | "reasoning" | "storage" | "notification" | "done">("idle");
 
@@ -111,15 +111,15 @@ const [activeRole, setActiveRole] = useState<IAMRole>(IAM_ROLES[0]);
 
   // Ensure scroll position is reset to the top whenever active section changes
   useEffect(() => {
-  authService.getCurrentUser().then((user) => {
-    if (user) {
-      setCognitoUser(user);
-      setActiveRole(mapCognitoRoleToIam(user.role));
-    }
+    authService.getCurrentUser().then((user) => {
+      if (user) {
+        setCognitoUser(user);
+        setActiveRole(mapCognitoRoleToIam(user.role));
+      }
 
-    setLoadingAuth(false);
-  });
-}, []);
+      setLoadingAuth(false);
+    });
+  }, []);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeSection]);
@@ -152,9 +152,12 @@ const [activeRole, setActiveRole] = useState<IAMRole>(IAM_ROLES[0]);
           setTimeout(() => {
             setPipelineStep("notification"); // DynamoDB -> SNS
             setTimeout(() => {
-              setPipelineStep("done"); // SNS -> complete
+              setPipelineStep("done");
               setActiveDisruption(disruption);
               setIsAnalyzing(false);
+
+              window.location.hash = "incident-details";
+              setActiveSection("incident-details");
               // Simply alert completion within the current console without redirecting
             }, 900);
           }, 900);
@@ -195,8 +198,8 @@ const [activeRole, setActiveRole] = useState<IAMRole>(IAM_ROLES[0]);
 
   // Protected Routes Check: Require authenticated Cognito User pool session
   if (loadingAuth) {
-  return null;
-}
+    return null;
+  }
   if (!cognitoUser) {
     return (
       <div className="relative min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden antialiased flex items-center justify-center">
@@ -242,7 +245,7 @@ const [activeRole, setActiveRole] = useState<IAMRole>(IAM_ROLES[0]);
 
       {/* 3. Main Scroll Container for the Homepage Cinematic Journey */}
       <main className="pl-[84px] sm:pl-24 pr-4 md:pr-10 w-full flex flex-col relative z-10 py-8 min-h-[calc(100vh-48px)]">
-        
+
         {/* Section 1: Dashboard Overview */}
         {activeSection === "dashboard" && (
           <DashboardOverview
