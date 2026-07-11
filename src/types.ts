@@ -22,6 +22,7 @@ export interface Disruption {
   impactCost: number; // as a positive number, e.g. +22
   reasoning: string[];
   recommendations: Recommendation[];
+  promptText?: string;
 }
 
 export interface PerformanceMetrics {

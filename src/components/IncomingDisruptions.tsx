@@ -118,6 +118,7 @@ export default function IncomingDisruptions({ onAnalyzeDisruption, isAnalyzing }
       const analyzedDisruption: Disruption = await res.json();
       // Add id/metadata for tracking
       analyzedDisruption.id = `disruption-${Date.now()}`;
+      analyzedDisruption.promptText = textToAnalyze;
       onAnalyzeDisruption(analyzedDisruption);
     } catch (err: any) {
       console.error("Error calling analyze disruption:", err);
@@ -138,7 +139,7 @@ export default function IncomingDisruptions({ onAnalyzeDisruption, isAnalyzing }
           <span className="text-xs font-mono text-sky-400 uppercase tracking-widest block mb-1">Stage III — Ingress Signal Parser</span>
           <h2 className="text-2xl font-bold tracking-tight text-slate-100 uppercase">Interactive Threat Synthesizer</h2>
           <p className="text-slate-400 text-xs mt-2 max-w-2xl leading-relaxed">
-            Formulate scenarios or use real incident templates. SentinelChain AI triggers Gemini server-side reasoners to parse unstructured cables, calculate downstream supply bottlenecks, and formulate alternate routes.
+            Formulate scenarios or use real incident templates. SentinelChain AI triggers AWS Bedrock server-side reasoners to parse unstructured cables, calculate downstream supply bottlenecks, and formulate alternate routes.
           </p>
         </div>
 
@@ -208,7 +209,7 @@ export default function IncomingDisruptions({ onAnalyzeDisruption, isAnalyzing }
               </div>
               <div className="flex justify-between">
                 <span>Model Engine:</span>
-                <span className="text-slate-300">Gemini 2.5 (Pro)</span>
+                <span className="text-slate-300">AWS Bedrock (Nova Lite)</span>
               </div>
             </div>
           </div>
@@ -310,7 +311,7 @@ export default function IncomingDisruptions({ onAnalyzeDisruption, isAnalyzing }
                   </>
                 ) : (
                   <>
-                    <span>Run Gemini AI Analysis</span>
+                    <span>Run AWS Bedrock Analysis</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
