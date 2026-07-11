@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getPerformanceMetrics } from "./_lib/sentinel";
+import { getPerformanceMetrics } from "./_lib/sentinel.js";
 
 // Vercel Serverless Function -> GET /api/performance-metrics
 export default function handler(req: VercelRequest, res: VercelResponse) {

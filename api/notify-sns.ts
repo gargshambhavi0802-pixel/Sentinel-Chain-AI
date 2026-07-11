@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { dispatchNotification } from "./_lib/sentinel";
+import { dispatchNotification } from "./_lib/sentinel.js";
 
 // Vercel Serverless Function -> POST /api/notify-sns
 export default function handler(req: VercelRequest, res: VercelResponse) {

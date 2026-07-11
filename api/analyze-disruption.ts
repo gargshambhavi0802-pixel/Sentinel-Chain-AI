@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { analyzeDisruption } from "./_lib/sentinel";
+import { analyzeDisruption } from "./_lib/sentinel.js";
 
 // Vercel Serverless Function -> POST /api/analyze-disruption
 export default async function handler(req: VercelRequest, res: VercelResponse) {
