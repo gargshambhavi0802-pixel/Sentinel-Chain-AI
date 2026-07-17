@@ -8,10 +8,14 @@
 // Files/folders inside /api that start with "_" are NOT deployed as
 // Serverless Functions by Vercel, so this file is safe to place here.
 
+import { invokeAnalysisLambda } from "./lambdaService";
+import dotenv from "dotenv";
+dotenv.config();
 import {
   BedrockRuntimeClient,
   ConverseCommand,
 } from "@aws-sdk/client-bedrock-runtime";
+
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,52 +68,82 @@ export interface NotificationResult {
 // Initialize Amazon Bedrock Runtime client
 const bedrock = new BedrockRuntimeClient({
   region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
 });
 
-console.log("SentinelChain AI: Amazon Bedrock Runtime initialized.");
+
 
 // ---------------------------------------------------------------------------
 // 1. Analyze Disruption
 // ---------------------------------------------------------------------------
 
-export async function analyzeDisruption(text: string): Promise<DisruptionAnalysis> {
+export async function analyzeDisruption(
+  text: string,
+  userId?: string,
+  email?: string
+): Promise<DisruptionAnalysis> {
   // If live AI is available, use it!
   if (process.env.BEDROCK_MODEL_ID) {
     try {
-      const systemInstruction = `You are SentinelChain AI, an elite enterprise supply chain intelligence engine integrated with AWS Bedrock. You analyze raw news, port, weather, and supplier alerts, calculating risk propagation across global networks. Return output strictly matching the requested JSON schema. Do not include markdown formatting or wrappers outside of raw JSON.
+     const systemInstruction = `
+You are SentinelChain AI, an elite enterprise supply chain intelligence engine integrated with AWS Bedrock.
 
-The JSON object you return must strictly match this shape:
+You analyze ONLY the disruption report provided by the user.
+Never use previous examples.
+Never invent unrelated events.
+If the report mentions Suez Canal, the response must be about Suez Canal.
+
+Return ONLY valid JSON. No markdown. No explanation.
+Return exactly 2 recommendations.
+IMPORTANT:
+All percentage values must be returned as whole numbers.
+Never return decimals.
+
+Examples:
+probability: 95 (not 0.95)
+impactCost: 20 (not 0.20)
+reduction: 60 (not 0.60)
+
+reasoning must contain exactly 3 detailed causal chain steps explaining how the disruption propagates through the supply chain.
+
+JSON schema:
+
 {
-  "headline": string, // A crisp 5-8 word headline summarizing the threat
-  "category": string, // Must be one of: 'News', 'Weather', 'Port', 'Supplier'
-  "severity": string, // Must be one of: 'Critical', 'High', 'Medium', 'Low'
-  "probability": integer, // Probability of direct impact in percentage (e.g. 85)
-  "affectedNodes": string[], // Array of specific ports, routes, canals, or supplier regions affected
-  "impactInventory": integer, // Estimated percentage of inventory drawdown, as a negative integer (e.g. -35)
-  "impactDeliveries": string, // Description of expected delivery delays, lead-times, or rerouting overheads
-  "impactCost": integer, // Estimated percentage of logistics cost surge, as a positive integer (e.g. +22)
-  "reasoning": string[], // 3 structured steps of analytical reasoning tracing the cascade of the disruption
-  "recommendations": [ // At least 2 highly specific mitigation playbooks
+  "headline": "string",
+  "category": "News | Weather | Port | Supplier",
+  "severity": "Critical | High | Medium | Low",
+  "probability": 0,
+  "affectedNodes": [],
+  "impactInventory": 0,
+  "impactDeliveries": "string",
+  "impactCost": 0,
+  "reasoning": [],
+  "recommendations": [
     {
-      "title": string, // Name of the mitigation tactic (e.g. 'Air-freight high priority microchips')
-      "reduction": integer, // Risk reduction percentage (e.g. 45)
-      "cost": string, // Cost estimation label (e.g. '$$$ High' or '$$ Medium' or '$ Low')
-      "description": string // Detailed description of how to execute this playbook
+      "title": "string",
+      "reduction": 0,
+      "cost": "string",
+      "description": "string"
     }
   ]
 }
+`;
 
-Respond with ONLY the raw JSON object. Do not include any preamble, explanation, or markdown code fences.`;
 
-      const userPrompt = `Analyze the following supply chain or logistics disruption report:
-"${text}"
+      const userPrompt = `
+DISRUPTION REPORT TO ANALYZE:
 
-Provide a highly realistic, precise, and structural impact assessment.`;
+${text}
 
+TASK:
+Analyze ONLY the above report.
+
+Requirements:
+- Identify the exact disruption mentioned.
+- Do not generate a similar example.
+- Do not mention unrelated ports, countries, or industries.
+- All affectedNodes must come from or logically follow from this report.
+- Return only JSON.
+`;
       const command = new ConverseCommand({
         modelId: process.env.BEDROCK_MODEL_ID,
         system: [{ text: systemInstruction }],
@@ -120,8 +154,8 @@ Provide a highly realistic, precise, and structural impact assessment.`;
           },
         ],
         inferenceConfig: {
-          maxTokens: 2048,
-          temperature: 0.3,
+          maxTokens: 1200,
+          temperature: 0,
         },
       });
 
@@ -130,16 +164,35 @@ Provide a highly realistic, precise, and structural impact assessment.`;
       const responseText = contentBlocks
         .map((block) => ("text" in block ? block.text : ""))
         .join("");
-      const cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+        console.log("🧠 RAW BEDROCK OUTPUT:");
+        console.log(responseText);
+      const cleanJson = responseText
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim()
+  .replace(/^[^{]*/, "")
+  .replace(/[^}]*$/, "");
       let parsedData: DisruptionAnalysis;
 
       try {
         parsedData = JSON.parse(cleanJson);
+        parsedData.probability = Math.round(parsedData.probability);
+
+parsedData.recommendations = parsedData.recommendations.map((r) => ({
+  ...r,
+  reduction: Math.round(r.reduction)
+}));
       } catch (err) {
         throw new Error("Amazon Bedrock did not return valid JSON.");
       }
+      await invokeAnalysisLambda({
+  userId,
+  email,
+  prompt: text,
+  analysis: parsedData,
+});
 
-      return parsedData;
+     return parsedData;
     } catch (apiError: any) {
       console.log("========== BEDROCK ERROR ==========");
       console.log(apiError);
@@ -153,7 +206,9 @@ Provide a highly realistic, precise, and structural impact assessment.`;
   }
 
   // Intelligence Heuristics Engine (Mock fallback when offline or on error)
-  const query = text.toLowerCase();
+  console.log("TEXT TYPE:", typeof text);
+console.log("TEXT VALUE:", text);
+  const query = String(text ?? "").toLowerCase();
   let headline = "Global Trade Threat Detected";
   let category = "News";
   let severity = "Medium";

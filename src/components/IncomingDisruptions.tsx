@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getCurrentUser, fetchUserAttributes } from "aws-amplify/auth";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Flame, PenSquare, ArrowRight, Sparkles, Send, 
@@ -105,11 +106,18 @@ export default function IncomingDisruptions({ onAnalyzeDisruption, isAnalyzing }
     }
 
     try {
-      const res = await fetch("/api/analyze-disruption", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: textToAnalyze })
-      });
+      const user = await getCurrentUser();
+const attributes = await fetchUserAttributes();
+
+const res = await fetch("/api/analyze-disruption", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    text: textToAnalyze,
+    userId: user.userId,
+    email: attributes.email,
+  }),
+});
 
       if (!res.ok) {
         throw new Error("Analysis failed. Server responded with an error.");
