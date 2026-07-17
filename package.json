@@ -13,6 +13,9 @@
   "dependencies": {
     "@aws-amplify/auth": "^6.20.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1085.0",
+    "@aws-sdk/client-dynamodb": "^3.1088.0",
+    "@aws-sdk/client-lambda": "^3.1089.0",
+    "@aws-sdk/lib-dynamodb": "^3.1088.0",
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
