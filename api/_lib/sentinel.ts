@@ -9,6 +9,7 @@
 // Serverless Functions by Vercel, so this file is safe to place here.
 
 import { invokeAnalysisLambda } from "./lambdaService";
+import { publishAIAnalysisCompleted } from "./eventBridgeService";
 import dotenv from "dotenv";
 dotenv.config();
 import {
@@ -185,6 +186,17 @@ parsedData.recommendations = parsedData.recommendations.map((r) => ({
       } catch (err) {
         throw new Error("Amazon Bedrock did not return valid JSON.");
       }
+
+      // Amazon Bedrock has successfully produced a valid analysis at this
+      // point. Emit the AIAnalysisCompleted event to EventBridge -> SNS.
+      // Fire-and-forget: it is intentionally NOT awaited so notification
+      // latency never delays the AI response returned to the frontend.
+      void publishAIAnalysisCompleted({
+        analysis: parsedData,
+        userId,
+        email,
+      });
+
       await invokeAnalysisLambda({
   userId,
   email,
