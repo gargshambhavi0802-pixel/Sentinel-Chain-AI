@@ -139,6 +139,9 @@ export default function App() {
   // Sequential data-pipeline animation when a threat scenario is initiated
   // Fixed: No page automatically redirects to AI Reasoning. The user navigates independently.
   const handleAnalyzeDisruption = (disruption: Disruption) => {
+    console.log("===== APP RECEIVED =====");
+    console.log(disruption);
+    console.log("========================");
     setIsAnalyzing(true);
     setPipelineStep("ingest");
 
